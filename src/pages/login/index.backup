@@ -1,0 +1,190 @@
+import axios from "axios";
+import axiosInstance from "../../utils/axiosConfig";
+import { useRouter } from "next/navigation";
+import swal from "sweetalert";
+import Image from "next/image";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { translation } from "../../utils/translation";
+import Heading from "../../components/heading";
+
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isValid, setIsValid] = useState(true);
+  const { push } = useRouter();
+  const [content, setContent] = useState({});
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+    return emailRegex.test(email);
+  };
+
+  const handleBlur = () => {
+    const isValidEmail = validateEmail(email);
+    setIsValid(isValidEmail);
+  };
+
+  const [isVisible, setIsVisible] = useState(false);
+  const toggleVisible = () => {
+    setIsVisible(!isVisible);
+  };
+
+  useEffect(() => {
+    axios
+      .get(translation.url + `?type=${localStorage.getItem("language") || 'en'}`)
+      .then((response) => {
+        let obj = {};
+        response.data.data.forEach((v, i) => {
+          obj[`${v.title_code}`] = v.text;
+        });
+
+        setContent(obj);
+      });
+  }, []);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const data = {
+      email: email,
+      password: password,
+    };
+
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v2/users/login?agent=web`,
+        data
+      );
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("name", response.data.name);
+      localStorage.setItem("email", response.data.email);
+
+      swal("Success", `Success login`, "success");
+      setTimeout(() => {
+        push("/cleaning");
+      }, 1000);
+    } catch (error) {
+      if (error.response.status === 400) {
+        swal("Bad Request", `${error.response.data.message}`);
+      } else {
+        swal("Err", `Error making POST request ${error}`, "error");
+      }
+    }
+  };
+
+  return (
+    <>
+      <Heading />
+      <div className="">
+        <div className="banner-login inline justify-between p-10 max-[412px]:p-4 md:flex">
+          <Link href="/">
+            <Image
+              src="/assets/arrow-right.png"
+              alt="Arrow"
+              width="40"
+              height="40"
+              className="max-[412px]:none rounded-full bg-white p-2 shadow-md"
+            />
+          </Link>
+          <div className="flex items-center justify-center">
+            <div className="text-custom-gray-1 mx-5 mt-5 h-[76vh] h-auto w-[30rem] rounded-xl bg-white p-10 shadow-lg sm:mt-0 md:mx-0">
+              <p className="text-title mb-6">{content.sign_in}</p>
+              <form className="w-full max-w-lg" onSubmit={handleSubmit}>
+                <div className="mb-6">
+                  <div className="w-full">
+                    <label className="mb-2 block text-[18px] font-bold text-gray-700">
+                      {content.email}
+                    </label>
+                    <input
+                      className={`mb-0 block w-full appearance-none rounded-lg border ${
+                        isValid ? "bg-gray-200" : "border-red-500"
+                      } px-4 py-2 leading-tight text-gray-700 focus:bg-white focus:outline-none`}
+                      type="email"
+                      placeholder={content.email}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onBlur={handleBlur}
+                    />
+                    {!isValid && (
+                      <p className="text-red-500">Invalid email format</p>
+                    )}
+                  </div>
+                </div>
+                <div className="mb-6">
+                  <div className="w-full">
+                    <label className="mb-2 block text-[18px] font-bold tracking-wide text-gray-700">
+                      {content.password}
+                    </label>
+                    <div className="relative">
+                      <input
+                        className="mb-3 block w-full appearance-none rounded-lg border border-gray-200 bg-gray-200 px-4 py-2 leading-tight text-gray-700 focus:border-gray-500 focus:bg-white focus:outline-none"
+                        type={isVisible ? "text" : "password"}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder={content.password}
+                      />
+
+                      <span
+                        onClick={toggleVisible}
+                        className="absolute right-0 top-0 mr-4 mt-2 cursor-pointer"
+                      >
+                        <span>{isVisible ? content.hide : content.show}</span>
+                        {/* <FontAwesomeIcon
+                          icon={
+                            isVisible
+                              ? "fa-solid fa-eye-slash"
+                              : "fa-solid fa-eye"
+                          }
+                        /> */}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mb-6">
+                  <button
+                    type="submit"
+                    className="btn-gradient-custom-1 flex w-full items-center justify-center rounded-lg bg-blue-700 px-4 py-2 text-center text-sm font-medium text-white shadow-md hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300"
+                  >
+                    {content.submit}
+                    {/* <FontAwesomeIcon
+                      icon="arrow-right"
+                      className="sm-icon ml-2"
+                      size="sm"
+                    /> */}
+                  </button>
+                  <p className="text-md mt-3 pb-4 text-center text-sm">
+                    {content.not_have_content}{" "}
+                    <Link href="/register" className="text-sky-300">
+                      {content.sign_in_1}
+                    </Link>
+                  </p>
+                </div>
+              </form>
+              <div className="mt-2">
+                <p className="text-md pb-4 text-center">{content.sign_in_2}</p>
+                <div className="flex justify-center gap-10">
+                  <Image
+                    src="/assets/facebook-icon.png"
+                    alt="Facebook"
+                    width="32"
+                    height="32"
+                    className="rounded-md p-2 shadow-md"
+                  />
+                  <Image
+                    src="/assets/google-icon.png"
+                    alt="Facebook"
+                    width="32"
+                    height="32"
+                    className="rounded-md p-2 shadow-md"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content One */}
+    </>
+  );
+}
